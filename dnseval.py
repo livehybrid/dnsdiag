@@ -96,13 +96,14 @@ def main():
     want_dnssec = False
     force_miss = False
     verbose = False
+    show_answer = False
     color_mode = False
     qname = 'wikipedia.org'
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "hf:c:t:w:S:TevCmXHDj:",
+        opts, args = getopt.getopt(sys.argv[1:], "hf:c:t:w:S:TevaCmXHDj:",
                                    ["help", "file=", "count=", "type=", "wait=", "json=", "tcp", "edns", "verbose",
-                                    "color", "cache-miss", "srcip=", "tls", "doh", "dnssec"])
+                                    "show_answer", "color", "cache-miss", "srcip=", "tls", "doh", "dnssec"])
     except getopt.GetoptError as err:
         print(err)
         usage()
@@ -141,6 +142,8 @@ def main():
             color_mode = True
         elif o in ("-v", "--verbose"):
             verbose = True
+        elif o in ("-a", "--answers"):
+            show_answer = True
         elif o in ("-X", "--tls"):
             proto = PROTO_TLS
             dst_port = 853  # default for DoT, unless overriden using -p
@@ -242,12 +245,20 @@ def main():
                     'text_flags': text_flags,
                     'flags': retval.flags,
                     'rcode': retval.rcode,
-                    'rcode_text': retval.rcode_text,
+                    'rcode_text': retval.rcode_text
                 }
                 outer_data = {
                     'hostname': qname,
                     'data': dns_data
                 }
+                if show_answer:
+                    try:
+                        dns_answers = retval.answer[0].to_text().split("\n")
+                        dns_data['answer'] = []
+                        for i in dns_answers:
+                            dns_data['answer'] += [ans[1] for ans in [i.split(f" IN {rdatatype} ")]]
+                    except:
+                        dns_answer = []
 
                 if json_filename == '-':  # stdout
                     print(json.dumps(outer_data, indent=2))
